@@ -1,7 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from supabase import create_client
-
+import os
 app = FastAPI()
+@app.get("/")
+def home():
+    return {"status": "online", "message": "API is running"}
 
 URL = "https://icnlaumwdyrebbzmexiu.supabase.co"
 KEY = "sb_publishable_5JQlhyKV7IO5gLjMDMRxfA_bs2FMTGd"
@@ -23,4 +26,5 @@ def verify_license(key: str):
         "status": "success",
         "message": "Accès autorisé",
         "user_data": user["data_cloud"]
+
     }
