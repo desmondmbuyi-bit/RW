@@ -5,8 +5,8 @@ import os
 app = FastAPI()
 
 # Railway va lire ces variables dans ses réglages (on va les ajouter après)
-URL = os.getenv("https://icnlaumwdyrebbzmexiu.supabase.co")
-KEY = os.getenv("sb_publishable_5JQlhyKV7IO5gLjMDMRxfA_bs2FMTGd")
+URL = os.getenv("SUPABASE_URL")
+KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(URL, KEY)
 
 @app.get("/")
@@ -24,5 +24,6 @@ def verify_license(key: str):
         return {"status": "authorized", "user": response.data[0]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
