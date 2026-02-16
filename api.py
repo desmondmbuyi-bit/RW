@@ -24,8 +24,5 @@ def verify_license(key: str):
         return {"status": "authorized", "user": response.data[0]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-        "user_data": user["data_cloud"]
-
-    }
 
 
