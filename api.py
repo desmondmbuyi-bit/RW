@@ -4,30 +4,39 @@ import os
 
 app = FastAPI()
 
-# Railway va lire ces variables dans ses réglages (on va les ajouter après)
-URL = os.getenv("SUPABASE_URL")
-KEY = os.getenv("SUPABASE_KEY")
-supabase = create_client(URL, KEY)
-@app.get("/")
-def health_check():
-    return {"status": "ok", "message": "Vigile actif"}
+# Vérification sécurisée des variables
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("ERREUR : Variables Supabase manquantes !")
+    supabase = None
+else:
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @app.get("/")
-def home():
-    return {"status": "online", "message": "Vigile de licence prêt"}
+def health():
+    return {"status": "online"}
 
 @app.get("/verify/{key}")
 def verify_license(key: str):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase non configuré")
+
     try:
-        response = supabase.table("clients").select("*").eq("license_key", key).eq("is_active", True).execute()
-        
+        response = (
+            supabase
+            .table("clients")
+            .select("*")
+            .eq("license_key", key)
+            .eq("is_active", True)
+            .execute()
+        )
+
         if not response.data:
             raise HTTPException(status_code=403, detail="Acces refuse")
-        
+
         return {"status": "authorized", "user": response.data[0]}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
-
-
