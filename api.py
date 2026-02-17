@@ -8,6 +8,9 @@ app = FastAPI()
 URL = os.getenv("SUPABASE_URL")
 KEY = os.getenv("SUPABASE_KEY")
 supabase = create_client(URL, KEY)
+@app.get("/")
+def health_check():
+    return {"status": "ok", "message": "Vigile actif"}
 
 @app.get("/")
 def home():
@@ -24,6 +27,7 @@ def verify_license(key: str):
         return {"status": "authorized", "user": response.data[0]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 
