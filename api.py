@@ -28,6 +28,17 @@ def verify_license(key: str):
             raise HTTPException(status_code=403, detail="Acces refuse")
         
         user_info = response.data[0]
+        # 1. Vérifier si activé manuellement
+        if not user["is_active"]:
+            raise HTTPException(status_code=403, detail="Licence désactivée manuellement")
+    
+    # 2. Vérifier la date d'expiration
+        if user["expires_at"]:
+        expiration = datetime.fromisoformat(user["expires_at"].replace('Z', '+00:00'))
+            if datetime.now().astimezone() > expiration.astimezone():
+            # Optionnel : on peut désactiver la licence en DB automatiquement ici
+            supabase.table("clients").update({"is_active": False}).eq("license_key", key).execute()
+                raise HTTPException(status_code=403, detail="Licence expirée (30 jours dépassés)")
         
         # On force ici les noms des clés renvoyées pour correspondre au logiciel
         return {
@@ -40,24 +51,9 @@ def verify_license(key: str):
         if not response.data:
             raise HTTPException(status_code=404, detail="Clé introuvable")
     
-    user = response.data[0]
     
-    # 1. Vérifier si activé manuellement
-        if not user["is_active"]:
-        raise HTTPException(status_code=403, detail="Licence désactivée manuellement")
-    
-    # 2. Vérifier la date d'expiration
-        if user["expires_at"]:
-        expiration = datetime.fromisoformat(user["expires_at"].replace('Z', '+00:00'))
-            if datetime.now().astimezone() > expiration.astimezone():
-            # Optionnel : on peut désactiver la licence en DB automatiquement ici
-            supabase.table("clients").update({"is_active": False}).eq("license_key", key).execute()
-                raise HTTPException(status_code=403, detail="Licence expirée (30 jours dépassés)")
 
-        return {
-        "status": "authorized",
-        "email": user["email"],
-        "data": user["data_cloud"]
-        }
+        
+
 
 
