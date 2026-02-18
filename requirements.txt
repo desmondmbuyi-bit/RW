@@ -1,3 +1,4 @@
 fastapi
-supabase
 uvicorn
+supabase
+python-dateutil
