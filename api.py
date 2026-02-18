@@ -2,58 +2,50 @@ from fastapi import FastAPI, HTTPException
 from supabase import create_client
 import os
 from datetime import datetime
+from dateutil import parser # Plus robuste pour lire les dates
 
 app = FastAPI()
 
-# Vérification sécurisée des variables
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("ERREUR : Variables Supabase manquantes !")
-    supabase = None
-else:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+url = os.getenv("SUPABASE_URL")
+key = os.getenv("SUPABASE_KEY")
+supabase = create_client(url, key)
 
 @app.get("/")
-def health():
-    return {"status": "online"}
+def home():
+    return {"status": "ok"}
 
 @app.get("/verify/{key}")
 def verify_license(key: str):
     try:
-        response = supabase.table("clients").select("*").eq("license_key", key).eq("is_active", True).execute()
+        response = supabase.table("clients").select("*").eq("license_key", key).execute()
         
         if not response.data:
-            raise HTTPException(status_code=403, detail="Acces refuse")
+            raise HTTPException(status_code=404, detail="Cle inexistante")
         
-        user_info = response.data[0]
-        # 1. Vérifier si activé manuellement
-        if not user["is_active"]:
-            raise HTTPException(status_code=403, detail="Licence désactivée manuellement")
-    
-    # 2. Vérifier la date d'expiration
-        if user["expires_at"]:
-        expiration = datetime.fromisoformat(user["expires_at"].replace('Z', '+00:00'))
+        user = response.data[0]
+        
+        # 1. Verif activation manuelle
+        if not user.get("is_active"):
+            raise HTTPException(status_code=403, detail="Licence desactivee")
+            
+        # 2. Verif expiration
+        exp_date_str = user.get("expires_at")
+        if exp_date_str:
+            # On utilise parser.parse pour eviter les crashs de format
+            expiration = parser.parse(exp_date_str)
             if datetime.now().astimezone() > expiration.astimezone():
-            # Optionnel : on peut désactiver la licence en DB automatiquement ici
-            supabase.table("clients").update({"is_active": False}).eq("license_key", key).execute()
-                raise HTTPException(status_code=403, detail="Licence expirée (30 jours dépassés)")
-        
-        # On force ici les noms des clés renvoyées pour correspondre au logiciel
+                # On desactive en DB pour la prochaine fois
+                supabase.table("clients").update({"is_active": False}).eq("license_key", key).execute()
+                raise HTTPException(status_code=403, detail="Licence expiree")
+
         return {
             "status": "authorized",
-            "email": user_info.get("email"), # Vérifie que 'email' est bien le nom dans Supabase
-            "data": user_info.get("data_cloud") # Vérifie que 'data_cloud' est bien le nom dans Supabase
+            "email": user.get("email"),
+            "data": user.get("data_cloud")
         }
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        if not response.data:
-            raise HTTPException(status_code=404, detail="Clé introuvable")
-    
-    
-
-        
-
-
-
+        # On renvoie l'erreur en JSON pour ne pas faire crash le serveur
+        print(f"Erreur interne: {e}")
+        raise HTTPException(status_code=500, detail="Erreur interne du serveur")
