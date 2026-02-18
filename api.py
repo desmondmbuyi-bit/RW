@@ -20,23 +20,20 @@ def health():
 
 @app.get("/verify/{key}")
 def verify_license(key: str):
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Supabase non configuré")
-
     try:
-        response = (
-            supabase
-            .table("clients")
-            .select("*")
-            .eq("license_key", key)
-            .eq("is_active", True)
-            .execute()
-        )
-
+        response = supabase.table("clients").select("*").eq("license_key", key).eq("is_active", True).execute()
+        
         if not response.data:
             raise HTTPException(status_code=403, detail="Acces refuse")
-
-        return {"status": "authorized", "user": response.data[0]}
-
+        
+        user_info = response.data[0]
+        
+        # On force ici les noms des clés renvoyées pour correspondre au logiciel
+        return {
+            "status": "authorized",
+            "email": user_info.get("email"), # Vérifie que 'email' est bien le nom dans Supabase
+            "data": user_info.get("data_cloud") # Vérifie que 'data_cloud' est bien le nom dans Supabase
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
