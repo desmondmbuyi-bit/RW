@@ -70,6 +70,39 @@ def public_verify(key: str):
 def init_db(schema: str = Depends(verifier_licence_et_get_schema)):
     conn = get_db_conn()
     cur = conn.cursor()
+    """Utilisé par l'écran de démarrage du logiciel pour valider la clé"""
+    try:
+        # On vérifie la licence
+        response = supabase.table("clients").select("*").eq("license_key", key).execute()
+        
+        if not response.data:
+            raise HTTPException(status_code=404, detail="Clé inexistante")
+        
+        user = response.data[0]
+        
+        # Vérif si active
+        if not user.get("is_active"):
+            raise HTTPException(status_code=403, detail="Licence désactivée")
+            
+        # Vérif expiration
+        exp_date_str = user.get("expires_at")
+        if exp_date_str:
+            expiration = parser.parse(exp_date_str)
+            if datetime.now().astimezone() > expiration.astimezone():
+                supabase.table("clients").update({"is_active": False}).eq("license_key", key).execute()
+                raise HTTPException(status_code=403, detail="Licence expirée")
+
+        # ✅ ON RENVOIE UN DICTIONNAIRE (JSON) ET NON UNE CHAÎNE
+        return {
+            "status": "authorized",
+            "email": user.get("email"),
+            "message": "Licence valide"
+        }
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur serveur: {str(e)}")
     try:
         # 1. Création du schéma client
         cur.execute(f"CREATE SCHEMA IF NOT EXISTS {schema};")
@@ -221,3 +254,4 @@ def get_taux(schema: str = Depends(verifier_licence_et_get_schema)):
 
 # NOTE : J'ai omis certaines routes répétitives (DELETE, UPDATE) pour la brièveté, 
 # mais la structure est là. Tu peux les ajouter sur le même modèle.
+
