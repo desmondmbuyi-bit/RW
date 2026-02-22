@@ -10,6 +10,14 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Autorise tous les sites/téléphones
+    allow_credentials=True,
+    allow_methods=["*"],  # Autorise GET, POST, etc.
+    allow_headers=["*"],  # Autorise tous les headers (dont X-License-Key)
+)
+
 # --- CONFIGURATION ---
 # Ces variables doivent être définies dans l'onglet "Variables" sur Railway
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -321,4 +329,5 @@ def set_taux(t: dict, schema: str = Depends(verifier_licence_et_get_schema)):
     conn.commit()
     conn.close()
     return {"status": "success"}
+
 
