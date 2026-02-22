@@ -6,6 +6,7 @@ from psycopg2 import sql
 from datetime import datetime
 from dateutil import parser
 from typing import Optional
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
@@ -320,3 +321,4 @@ def set_taux(t: dict, schema: str = Depends(verifier_licence_et_get_schema)):
     conn.commit()
     conn.close()
     return {"status": "success"}
+
